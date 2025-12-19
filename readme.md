@@ -7,10 +7,12 @@ Aims to be a utility tool for quickly publishing changes to packages on Roblox r
 ## Todo
 
 - [x] Generate package map for a given package (asset)
+    - [ ] generate from specific revision
+        - [ ] embed revision ID into package
 - [x] Generate a matching map for a given directory
 - [x] Compare mappings for changes
 - [ ] Publishing to package
     - [ ] All / Specified
-    - [ ] Package version notes
+    - [ ] Package revision notes
 - [ ] Reverting
     - requires mapping comparison

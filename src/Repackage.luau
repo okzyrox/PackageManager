@@ -54,34 +54,20 @@ local function getPackageContent(assetId: string, versionNumber: number?): strin
 	local statusCode, response = API.makeRequest(
 		urlData,
 		replacements,
-		nil,
-		{["Accept-Encoding"] = "gzip"}
-	)
-
-	if statusCode == 200 then
-		return response
-	else
-		Util.dprint("Failed to get package content for assetId:", assetId, "Status Code:", statusCode, "Response:", response)
-		return nil
-	end
-end
-
-local function getPackageContentV1(assetId: string): any?
-	local statusCode, response = API.makeRequest(
-		API.URLS.GET_CONTENT_V1_OPENCLOUD,
-		{ASSET_ID = assetId},
-		nil,
-		{
-			["Accept-Encoding"] = "gzip",
-			["Cookie"] = API.getCookie(),
-		}
+		nil
 	)
 
 	local jsonResponse = serde.decode("json", response)
 	if statusCode == 200 then
+		local assetTypeId = jsonResponse["assetTypeId"]
+		if assetTypeId ~= 10 then
+			print("Requested asset is not a package model!")
+			return nil
+		end
+
 		return jsonResponse
 	else
-		Util.dprint("Failed to get package content v1 for assetId:", assetId, "Status Code:", statusCode, "Response:", response)
+		print("Failed to get package content for assetId:", assetId, "Status Code:", statusCode, "Response:", response)
 		return nil
 	end
 end
@@ -93,7 +79,7 @@ local function getPackageTree(assetId: string): (string?, any?)
 		return nil
 	end
 	local packageName: string = meta["displayName"]
-	local content: any? = getPackageContentV1(assetId)
+	local content: any? = getPackageContent(assetId)
 	if content then
 		local dataLocation = content["location"]
 		local statusCode, response = API.makeRequest(
@@ -105,10 +91,8 @@ local function getPackageTree(assetId: string): (string?, any?)
 			nil,
 			{
 				["Accept-Encoding"] = "gzip",
-				["Cookie"] = API.getCookie(),
 			}
 		)
-
 		local success, deserializedPackage = pcall(function()
 			return roblox.deserializeModel(response)
 		end)
@@ -195,7 +179,7 @@ end
 local function create(assetId: string)
 	print("Processing...")
 	local packageName, tree = getPackageTree(assetId)
-	if not tree then
+	if not tree or not packageName then
 		print("Failed to retrieve package tree.")
 		return
 	end
@@ -211,7 +195,7 @@ local function create(assetId: string)
 	print("Package extracted to:", outDirPackage)
 end
 
-local function getPackage(packageName: string)
+local function getPackageInfo(packageName: string)
 	local outDir = Config.get("outputDirectory")
 	local packagePath = outDir .. packageName
 	if not fs.isDir(packagePath) then
@@ -238,7 +222,7 @@ local function getPackage(packageName: string)
 	end
 end
 
-local function getRevisions(assetId: string)
+local function getPackageRevisions(assetId: string)
 	local meta = getAssetMeta(assetId)
 	if not meta then
 		warn("Could not get package meta for asset with ID:", assetId)
@@ -265,7 +249,7 @@ local function getRevisions(assetId: string)
 	end
 end
 
-local function getchanges(packageName: string)
+local function getPackageDiff(packageName: string)
 	local anyChanges, changes = getPackageChanges(packageName)
 
 	if anyChanges == false then
@@ -301,6 +285,11 @@ local function getchanges(packageName: string)
 	end
 end
 
+local function debug(assetId: string)
+	local content = getPackageContent(assetId)
+	print(content)
+end
+
 local function setup()
 	local outDir = Config.getOrDefault("outputDirectory")
 	if not fs.isDir(outDir) then
@@ -319,17 +308,21 @@ local Commands: {[string]: Command} = {
 		args = {"Package Asset ID"},
 		func = create
 	},
-	get = {
+	info = {
 		args = {"Package Name"},
-		func = getPackage
+		func = getPackageInfo
 	},
-	getrevisions = {
+	revisions = {
 		args = {"Package Asset ID"},
-		func = getRevisions
+		func = getPackageRevisions
 	},
-	getchanges = {
+	diff = {
 		args = {"Package Name"},
-		func = getchanges
+		func = getPackageDiff
+	},
+	debug = {
+		args = {"Package Asset ID"},
+		func = debug
 	}
 }
 
@@ -338,8 +331,8 @@ local function main()
 	Util.DebugMode = Config.getOrDefault("debugLogs")
 
 	if not (#process.args > 0) then
-		print("Package Manager")
-		print("Usage: PackageManager.luau <command> [args...]")
+		print("Repackage - Package Manager")
+		print("Usage: Repackage.luau <command> [args...]")
 		print("Commands:")
 		for commandName, commandData in Commands do
 			local argsStr = table.concat(commandData.args, "> <")

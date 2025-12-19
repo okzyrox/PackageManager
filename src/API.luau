@@ -24,25 +24,14 @@ local URLS: {[string]: URL} = {
 		url = "https://apis.roblox.com/assets/v1/assets/{ASSET_ID}",
 		method = "GET"
 	},
-	GET_CONTENT_V1 = {
-		url = "https://assetdelivery.roblox.com/v1/asset?id={ASSET_ID}",
+	GET_CONTENT = {
+		url = "https://apis.roblox.com/asset-delivery-api/v1/assetId/{ASSET_ID}",
 		method = "GET"
 	},
-
-    GET_CONTENT_V1_OPENCLOUD = {
-        url = "https://assetdelivery.roblox.com/v1/openCloud/assetId/{ASSET_ID}",
+	GET_CONTENT_BY_VERSION = {
+		url = "https://apis.roblox.com/asset-delivery-api/v1/assetId/{ASSET_ID}/version/{VERSION_NUMBER}",
 		method = "GET"
-    },
-
-	--// 403: Forbidden :(
-	-- GET_CONTENT = {
-	-- 	url = "https://apis.roblox.com/asset-delivery-api/v1/assetId/{ASSET_ID}",
-	-- 	method = "GET"
-	-- },
-	-- GET_CONTENT_BY_VERSION = {
-	-- 	url = "https://apis.roblox.com/asset-delivery-api/v1/assetId/{ASSET_ID}/version/{VERSION_NUMBER}",
-	-- 	method = "GET"
-	-- },
+	},
 	GET_VERSIONS = {
 		url = "https://apis.roblox.com/assets/v1/assets/{ASSET_ID}/versions",
 		method = "GET"
@@ -55,7 +44,6 @@ local URLS: {[string]: URL} = {
 
 --// Vars
 local ApiKey: string? = nil
-local Cookie: string? = nil
 
 --// Module
 
@@ -73,22 +61,6 @@ function API.getApiKey(): string
 		return fileKey
 	else
 		error("No API key found! Follow instructions in secrets/apikey.txt.template")
-	end
-end
-
-function API.getCookie(): string
-	if Cookie then
-		return Cookie
-	end
-
-	if fs.isFile("secrets/cookie.txt") then
-		local fileCookie = fs.readFile("secrets/cookie.txt")
-		Cookie = fileCookie
-		return fileCookie
-	else
-		--/ the fact that assetdelivery doesnt work without the cookie version sucks
-		--/ cause api key wouldve worked if it wasnt for the evil malevolent "403 forbidden"
-		error("No Cookie found! Please create a cookie.txt file in the secrets folder with the FULL cookie.")
 	end
 end
 

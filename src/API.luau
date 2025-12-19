@@ -1,3 +1,4 @@
+--!nonstrict
 --// API
 --// Author: okzyrox
 --/ Date: 2025/12/18

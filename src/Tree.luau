@@ -1,3 +1,4 @@
+--!nonstrict
 --// Tree
 --// Author: okzyrox
 --/ Date: 2025/12/18
@@ -6,6 +7,18 @@
 local fs = require("@lune/fs")
 local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
+
+--// Types
+
+export type ScriptNode = LocalScript | Script | ModuleScript
+export type TreeNodeType = "file" | "directory"
+export type TreeNode = {
+	type: TreeNodeType,
+	name: string,
+	content: string?, --/ either file source code or meta content
+	children: {TreeNode}?,
+	packageAssetId: string?, --/ only for uppermost
+}
 
 --// Constants
 local DB = roblox.getReflectionDatabase()
@@ -31,7 +44,7 @@ function Tree.getInstanceProperties(instance: Instance): {[string]: any}
 	local classInfo = DB:GetClass(instance.ClassName)
 	if classInfo then
 		for _, propInfo in classInfo.Properties do
-			if EXCLUDED_PROPERTIES[propInfo.Name] then
+			if table.find(EXCLUDED_PROPERTIES, propInfo.Name) then
 				continue
 			end
 			local success, value = pcall(function()
@@ -45,7 +58,7 @@ function Tree.getInstanceProperties(instance: Instance): {[string]: any}
 	return properties
 end
 
-function Tree.constructInstanceTreeFromInstance(instance: Instance): any
+function Tree.constructInstanceTreeFromInstance(instance: Instance): TreeNode
     local children = instance:GetChildren()
     local isScript = SCRIPT_EXTENSIONS[instance.ClassName] ~= nil
     local extension = SCRIPT_EXTENSIONS[instance.ClassName] or ".meta.json"
@@ -55,7 +68,7 @@ function Tree.constructInstanceTreeFromInstance(instance: Instance): any
             return {
                 type = "file",
                 name = instance.Name .. extension,
-                content = (instance :: any).Source
+                content = (instance :: ScriptNode).Source
             }
         elseif instance.ClassName == "Folder" then
             return {
@@ -81,7 +94,7 @@ function Tree.constructInstanceTreeFromInstance(instance: Instance): any
             table.insert(dirChildren, {
                 type = "file",
                 name = "init" .. extension,
-                content = (instance :: any).Source
+                content = (instance :: ScriptNode).Source
             })
         elseif instance.ClassName ~= "Folder" then
             table.insert(dirChildren, {
@@ -108,7 +121,7 @@ function Tree.constructInstanceTreeFromInstance(instance: Instance): any
     end
 end
 
-function Tree.constructInstanceTreeFromDirectory(dirPath: string): any
+function Tree.constructInstanceTreeFromDirectory(dirPath: string): TreeNode
 	if not fs.isDir(dirPath) then
 		error("Directory does not exist or is not a directory: " .. dirPath)
 	end

@@ -13,6 +13,13 @@ local Tree = require("./Tree")
 local API = require("./API")
 local Util = require("./Util")
 
+--// Types
+
+type Command = {
+	args: {string},
+	func: (...any) -> ()
+}
+
 --// Functions
 
 local function getAssetMeta(assetId: string): string?
@@ -147,7 +154,8 @@ local function debugAsset(assetId: string)
 	end
 	local packageName, tree = getPackageTree(assetId)
 	if not tree then
-		error("Failed to retrieve package tree.")
+		print("Failed to retrieve package tree.")
+		return
 	end
 	local outDir = "output/" .. packageName
 	-- if not fs.isDir(outDir) then
@@ -160,18 +168,60 @@ local function debugAsset(assetId: string)
 	fs.writeFile("debug/package_from_fs.json", serde.encode("json", tree2, true))
 end
 
+local function create(assetId: string)
+	print("Processing...")
+	local packageName, tree = getPackageTree(assetId)
+	if not tree then
+		print("Failed to retrieve package tree.")
+		return
+	end
+	local outDir = "output/" .. packageName
+	if not fs.isDir(outDir) then
+		fs.writeDir(outDir)
+	end
+	fs.writeFile(outDir .. "/package.json", serde.encode("json", tree, true))
+	Tree.writeInstanceTreeToFS(tree, outDir)
+	print("Package extracted to:", outDir)
+end
+
+local Commands: {[string]: Command} = {
+	create = {
+		args = {"Package Asset ID"},
+		func = create
+	},
+}
+
 local function main()
 	if not (#process.args > 0) then
 		print("Package Manager")
-		print("   Usage: PackageManager <assetId (of a package)>")
+		print("Usage: PackageManager.luau <command> [args...]")
+		print("Commands:")
+		for commandName, commandData in Commands do
+			local argsStr = table.concat(commandData.args, "> <")
+			print("  " .. commandName .. " <" .. argsStr .. ">")
+		end
 		return
-	elseif process.args[1] == nil or process.args[1] == "" then
-		print("Usage: PackageManager.luau <assetId (of a package)>")
-		warn("No assetId provided")
+	elseif process.args[1] == nil then
+		warn("No command provided!")
+		return
+	elseif not Commands[process.args[1]] then
+		warn("Unknown command: " .. process.args[1])
+		return
+	else
+		local commandName = process.args[1]
+		local commandData = Commands[commandName]
+		local commandArgs = {}
+		for i = 1, #commandData.args do
+			local argValue = process.args[i + 1]
+			if not argValue then
+				warn("Missing argument <" .. commandData.args[i] .. "> for '" .. commandName .. "'")
+				return
+			end
+			table.insert(commandArgs, argValue)
+		end
+
+		commandData.func(table.unpack(commandArgs))
 	end
-	local assetId = process.args[1]
-	debugAsset(assetId)
-	
 end
 
 main()

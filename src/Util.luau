@@ -1,9 +1,10 @@
+--!nonstrict
 --// Util
 --// Author: okzyrox
 --/ Date: 2025/12/18
 
 --// Vars
-local DebugMode = true
+local DebugMode = false
 
 --// Module
 

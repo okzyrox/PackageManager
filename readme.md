@@ -14,6 +14,9 @@ Aims to be a utility tool for quickly publishing changes to packages on Roblox r
 - [x] Publishing to package
     - [ ] All / Specified
     - [ ] Package revision notes
+    - [ ] Update local package meta on update
+    - [ ] Check if newer version exists; stash changes in some way
+        - [ ] Repackage temp folder config
 - [ ] Reverting
     - requires mapping comparison
 

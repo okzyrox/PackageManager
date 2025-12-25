@@ -179,21 +179,29 @@ function RobloxAPI.getPackageChanges(
 	local outDir = Config.get("outputDirectory")
 	local packagePath = Util.joinPathParts(outDir, packageName)
 	if not fs.isDir(packagePath) then
-		warn("Package not found at path:", packagePath)
-		return false
+		if Util.stringEndsWith(packagePath, ".Package") then
+			warn("Package not found at path:", packagePath)
+			return false, nil, "None"
+		else
+			packagePath = Util.joinPathParts(outDir, packageName .. ".Package")
+			if not fs.isDir(packagePath) then
+				warn("Package not found at path:", packagePath)
+				return false, nil, "None"
+			end
+		end
 	end
 
 	local treeNew = Tree.constructInstanceTreeFromDirectory(packagePath)
 	local packageAssetId = treeNew.packageAssetId
 	if not packageAssetId then
 		warn("Package at path does not have a valid asset ID:", packagePath)
-		return false
+		return false, nil, "None"
 	end
 
 	local _treeCurrentName, treeCurrent = RobloxAPI.getPackageTree(packageAssetId)
 	if not treeCurrent then
 		warn("Could not get current package tree for asset:", packageAssetId)
-		return false
+		return false, nil, "None"
 	end
 
 	local state: Tree.TreeState = "Unchanged"
@@ -224,18 +232,18 @@ end
 function RobloxAPI.publishToPackage(
     packageName: string, 
     _revisionNote: string?
-): PUBLISH_STATE
+): (PUBLISH_STATE, string?)
 	local outDir = Config.get("outputDirectory")
 	local packagePath = Util.joinPathParts(outDir, packageName)
 	if not fs.isDir(packagePath) then
 		warn("Package not found at path:", packagePath)
-		return "FAILED"
+		return "FAILED", nil
 	end
 
 	local changes, _c, _s = RobloxAPI.getPackageChanges(packageName)
 	if changes == false then
 		print("No changes to publish for package:", packageName)
-		return "NO-CHANGES"
+		return "NO-CHANGES", nil
 	end
 
 	local tree = Tree.constructInstanceTreeFromDirectory(packagePath)
@@ -251,10 +259,17 @@ function RobloxAPI.publishToPackage(
 		},
 		nil,
 		{
-			request = serde.encode("json", {
-				["assetId"] = tonumber(tree.packageAssetId),
-			}),
-			fileContent = serializedPackage
+			request = {
+				contentType = "application/json",
+				data = serde.encode("json", {
+					["assetId"] = tonumber(tree.packageAssetId),
+				})
+			},
+			fileContent = {
+				contentType = PACKAGE_CONTENT_TYPE,
+				filename = packageName .. ".rbxm",
+				data = serializedPackage
+			}
 		}
 
 	)
@@ -264,18 +279,19 @@ function RobloxAPI.publishToPackage(
 	if statusCode == 200 then
 		local jsonResponse = serde.decode("json", response)
 		local taskDone = jsonResponse["done"] or false
+		local operationId = jsonResponse["operationId"] or nil
 
 		if taskDone == false then
 			print("Submitted package to publish")
-            return "PENDING"
+            return "PENDING", operationId
 		else
 			print("Package published")
 		end
 
-		return "SUCCESS"
+		return "SUCCESS", nil
 	else
 		warn("Failed to publish package:", packageName, "Status Code:", statusCode, "Response:", response)
-		return "FAILED"
+		return "FAILED", nil
 	end
 end
 

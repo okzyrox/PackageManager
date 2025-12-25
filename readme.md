@@ -11,7 +11,7 @@ Aims to be a utility tool for quickly publishing changes to packages on Roblox r
         - [x] embed revision ID into package
 - [x] Generate a matching map for a given directory
 - [x] Compare mappings for changes
-- [ ] Publishing to package
+- [x] Publishing to package
     - [ ] All / Specified
     - [ ] Package revision notes
 - [ ] Reverting

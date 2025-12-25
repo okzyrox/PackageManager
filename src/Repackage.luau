@@ -206,6 +206,10 @@ local function getPackageDiff(
 		print(colored("Local package is outdated, update by re-downloading.", "yellow"))
 	end
 
+	if state == "None" then
+		return
+	end
+
 	if anyChanges == false then
 		print(colored("No changes", "grey"))
 	else
@@ -245,11 +249,13 @@ end
 local function publishPackage(
 	packageName: string
 )
-	local publishStatus = RobloxAPI.publishToPackage(packageName)
+	local publishStatus, operationId = RobloxAPI.publishToPackage(packageName)
 	if publishStatus == "SUCCESS" then
 		print(colored("Package published successfully: " .. packageName, "green"))
 	elseif publishStatus == "FAILED" then
 		print(colored("Failed to publish package: " .. packageName, "red"))
+	elseif publishStatus == "PENDING" then
+		print(colored("Package publish is pending. Operation ID: " .. tostring(operationId), "yellow"))
 	end
 end
 

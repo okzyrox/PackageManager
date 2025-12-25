@@ -34,7 +34,7 @@ export type TreeComparisonResult = {
 	anyChanges: boolean
 }
 
-export type TreeState = "Unchanged" | "Outdated" | "Modified"
+export type TreeState = "Unchanged" | "Outdated" | "Modified" | "None"
 
 --// Constants
 local DB = roblox.getReflectionDatabase()

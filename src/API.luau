@@ -17,6 +17,13 @@ export type URL = {
 	method: URLMethod,
 }
 
+export type FormValue = {
+	filename: string?,
+	contentType: string,
+	data: any,
+}
+
+
 --// Constants
 local URLS: {[string]: URL} = {
 	GET_META = {
@@ -124,7 +131,7 @@ function API.makeAdvRequest(
 	method: URLMethod,
 	headers: {[string]: string}?,
 	body: string?,
-	form: {[string]: any}?
+	form: {[string]: FormValue}?
 ): (number, string)
 	local finalHeaders = {
 		["x-api-key"] = API.getApiKey(),
@@ -141,20 +148,31 @@ function API.makeAdvRequest(
 
 	if form then
 		finalHeaders["Content-Type"] = "multipart/form-data"
-
-		local boundary = "----APIFormBoundary" .. tostring(os.clock()):gsub("%.", "")
+		local boundaryExt = Util.randomIntOfLength(16)
+		local boundary = "-----------------APIBoundary" .. tostring(boundaryExt)
 		finalHeaders["Content-Type"] = "multipart/form-data; boundary=" .. boundary
 
 		local parts = {}
 
-		for key, value in form do
+		for key, formValue in form do
 			table.insert(parts,
-				"--" .. boundary .. "\r\n" .. 'Content-Disposition: form-data; name="' .. key .. '"\r\n\r\n' .. tostring(value) .. "\r\n"
+	
+				Util.stringCombine({
+					"--" .. boundary .. "\r\n",
+					'Content-Disposition: form-data; name="' .. key .. '"' .. (formValue.filename and ('; filename="' .. formValue.filename .. '"') or "") .. "\r\n",
+					"Content-Type: " .. formValue.contentType .. "\r\n",
+					"" .. "\r\n",
+					tostring(formValue.data),
+					"\r\n",
+				}, "")
 			)
 		end
 
 		table.insert(parts, "--" .. boundary .. "--\r\n")
 		body = table.concat(parts)
+		if body then
+			finalHeaders["Content-Length"] = tostring(#body)
+		end
 	end
 
 	local response = net.request({

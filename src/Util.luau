@@ -61,6 +61,37 @@ function Util.getScriptTypeFromName(
 	end
 end
 
+function Util.randomInt(
+	min: number,
+	max: number
+): number
+	math.randomseed(os.clock())
+	local random = math.random()
+
+	return math.floor(random * (max - min + 1)) + min
+end
+
+function Util.randomIntOfLength(
+	length: number
+)
+	local min = 10 ^ (length - 1)
+	local max = (10 ^ length) - 1
+	return Util.randomInt(min, max)
+end
+function Util.stringCombine(
+	parts: {string},
+	separator: string
+): string
+	return table.concat(parts, separator)
+end
+
+function Util.stringEndsWith(
+	string: string,
+	suffix: string
+): boolean
+	return string:sub(-#suffix) == suffix
+end
+
 function Util.joinPathParts(
 	...: string
 ): string

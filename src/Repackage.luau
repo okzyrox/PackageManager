@@ -55,13 +55,8 @@ local function createPackage(
 		fs.writeDir(outDir)
 	end
 
-	local packageOutDir = RobloxAPI.getLocalPackagePath(packageName)
-	if not packageOutDir then
-		warn("Package not found with name:", packageName)
-		return
-	end
-	
-	if fs.isDir(packageOutDir) then
+	local packageOutDirExists = RobloxAPI.getLocalPackagePath(packageName)
+	if packageOutDirExists then
 		print(
 			colored("Package already downloaded! If you want to update the local package then use the", "yellow"),
 		 	colored("update", "magenta"),
@@ -69,10 +64,13 @@ local function createPackage(
 		)
 		return
 	end
+
+	local packageOutDir = Util.joinPathParts(outDir, packageName .. ".Package")
+	local packageMetaFile = Util.joinPathParts(packageOutDir, Tree.PACKAGE_META_FILE_PATH)
 	
 	Tree.writeInstanceTreeToFS(tree, outDir, true)
-	local packageMetaFile = Util.joinPathParts(packageOutDir, Tree.PACKAGE_META_FILE_PATH)
 	fs.writeFile(packageMetaFile, serde.encode("json", tree, true))
+
 	print("Package created at:", packageOutDir)
 end
 

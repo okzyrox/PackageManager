@@ -138,8 +138,8 @@ function Tree.constructInstanceTreeFromInstance(
 				type = "file",
 				name = instance.Name .. ".meta.json",
 				content = serde.encode("json", {
-					className = instance.ClassName,
-					properties = {
+					["$className"] = instance.ClassName,
+					["$properties"] = {
 						SoundId = (instance :: Sound).AudioContent.Uri,
 						Volume = (instance :: Sound).Volume,
 						Looped = (instance :: Sound).Looped,
@@ -153,8 +153,8 @@ function Tree.constructInstanceTreeFromInstance(
                 name = instance.Name .. ".meta.json",
                 content = serde.encode("json", {
                     -- Name = instance.Name,
-                    className = instance.ClassName,
-                    properties = Tree.getInstanceProperties(instance)
+                    ["$className"] = instance.ClassName,
+                    ["$properties"] = Tree.getInstanceProperties(instance)
                 })
             }
         end
@@ -182,8 +182,8 @@ function Tree.constructInstanceTreeFromInstance(
                 name = "init.meta.json",
                 content = serde.encode("json", {
                     -- Name = instance.Name,
-                    className = instance.ClassName,
-                    properties = props
+                    ["$className"] = instance.ClassName,
+                    ["$properties"] = props
 					
                 })
             })
@@ -319,11 +319,11 @@ function Tree.constructInstanceFromTreeNode(
 	elseif node.type == "file" then
 		if node.name:find(".meta.json") then
 			local metaJson = serde.decode("json", node.content or "{}")
-			local className = metaJson["className"] or "Folder"
+			local className = metaJson["$className"] or "Folder"
 			local instance = roblox.Instance.new(className)
 			instance.Name = node.name:gsub("%.meta%.json$", "") -- filter for meta
 			
-			local properties = metaJson["properties"] or {}
+			local properties = metaJson["$properties"] or {}
 			for propName, propValue in properties do
 				pcall(function()
 					instance[propName] = propValue

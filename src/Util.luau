@@ -3,9 +3,13 @@
 --// Author: okzyrox
 --/ Date: 2025/12/18
 
+--// Modules
+local colored = require("./Lib/colored")
+
 --// Vars
 local PrintExtraProperties = {
 	["Animation"] = {"AnimationId"},
+	["Sound"] = {"AudioContent"},
 }
 
 --// Module
@@ -20,6 +24,14 @@ function Util.dprint(
 		return
 	end
 	print(...)
+end
+
+function Util.warn(
+	...: any
+)
+	local str = { ... }
+	local strFmt = "[WARN] - " .. table.concat(str, " ")
+	print(colored(strFmt, "yellow"))
 end
 
 function Util.printInstance(
@@ -37,6 +49,16 @@ function Util.printInstance(
 				print(indent .. "  |" .. propName .. " = " .. tostring(value))
 			end
 		end
+	end
+
+	local tags = instance:GetTags()
+	if #tags > 0 then
+		print(indent .. "  |Tags: " .. table.concat(tags, ", "))
+	end
+
+	local attributes = instance:GetAttributes()
+	for attrName, attrValue in attributes do
+		print(indent .. "  |Attribute: " .. attrName .. " = " .. tostring(attrValue))
 	end
 
 	local Children = instance:GetChildren()

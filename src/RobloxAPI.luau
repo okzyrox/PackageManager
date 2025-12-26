@@ -64,11 +64,11 @@ function RobloxAPI.getAssetMeta(
 	if statusCode == 200 then
 		return jsonResponse
 	else
-		local base = "Failed to get asset meta for assetId:" .. assetId
+		local base = "Failed to get asset meta for assetId: " .. assetId
 		if versionId then
 			base ..= " with version:" .. versionId
 		end
-		Util.dprint(base, assetId, "Status Code:", statusCode, "Response:", response)
+		Util.dprint(base, "Status Code:", statusCode, "Response:", response)
 		return nil
 	end
 end
@@ -135,7 +135,7 @@ function RobloxAPI.getPackageTree(
 ): (string?, Tree.TreeNode?)
 	local meta = RobloxAPI.getAssetMeta(assetId, versionId)
 	if not meta then
-		warn("Could not get package meta for asset with ID:", assetId)
+		Util.warn("Could not get package meta for asset with ID:", assetId)
 		return nil
 	end
 	local packageName: string = meta["displayName"]
@@ -159,7 +159,7 @@ function RobloxAPI.getPackageTree(
 		end)
 
 		if not success then
-			warn("Unable to deserialize package: ", assetId)
+			Util.warn("Unable to deserialize package: ", assetId)
 			return nil
 		end
 		
@@ -173,16 +173,9 @@ function RobloxAPI.getPackageTree(
 		end)
 
 		if not treeSuccess then 
-			warn("Could not construct instance tree for package:", meta["displayName"])
+			Util.warn("Could not construct instance tree for package:", meta["displayName"])
 			-- print(tree)
 			return nil
-		end
-
-		if Util.DebugMode then
-			if not fs.isDir("debug") then
-				fs.writeDir("debug")
-			end
-			fs.writeFile("debug/package_tree_from_instance.json", serde.encode("json", tree, true))
 		end
 
 		return packageName, tree
@@ -197,20 +190,20 @@ function RobloxAPI.getPackageChanges(
 ): (boolean, Tree.TreeComparisonResult?, Tree.TreeState?)
 	local packagePath = RobloxAPI.getLocalPackagePath(packageName)
 	if not packagePath then
-		warn("Package not found with name:", packageName)
+		Util.warn("Package not found with name:", packageName)
 		return false, nil, "None"
 	end
 
 	local treeNew = Tree.constructInstanceTreeFromDirectory(packagePath)
 	local packageAssetId = treeNew.packageAssetId
 	if not packageAssetId then
-		warn("Package at path does not have a valid asset ID:", packagePath)
+		Util.warn("Package at path does not have a valid asset ID:", packagePath)
 		return false, nil, "None"
 	end
 
 	local _treeCurrentName, treeCurrent = RobloxAPI.getPackageTree(packageAssetId)
 	if not treeCurrent then
-		warn("Could not get current package tree for asset:", packageAssetId)
+		Util.warn("Could not get current package tree for asset:", packageAssetId)
 		return false, nil, "None"
 	end
 
@@ -245,7 +238,7 @@ function RobloxAPI.publishToPackage(
 ): (PUBLISH_STATE, string?)
 	local packagePath = RobloxAPI.getLocalPackagePath(packageName)
 	if not packagePath then
-		warn("Package not found with name:", packageName)
+		Util.warn("Package not found with name:", packageName)
 		return "FAILED", nil
 	end
 
@@ -299,7 +292,7 @@ function RobloxAPI.publishToPackage(
 
 		return "SUCCESS", nil
 	else
-		warn("Failed to publish package:", packageName, "Status Code:", statusCode, "Response:", response)
+		Util.warn("Failed to publish package:", packageName, "Status Code:", statusCode, "Response:", response)
 		return "FAILED", nil
 	end
 end

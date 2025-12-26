@@ -8,6 +8,7 @@ local fs = require("@lune/fs")
 local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
 
+local TreeDataTypes = require("./TreeDataTypes")
 local Util = require("./Util")
 
 local DMPLib = require("./Lib/diff_match_patch")
@@ -42,6 +43,7 @@ local DB = roblox.getReflectionDatabase()
 local EXCLUDED_PROPERTIES = {
 	"Parent",
 	"ClassName",
+	"Source",
 	"Name"
 }
 
@@ -60,6 +62,60 @@ local Tree = {}
 Tree.PACKAGE_META_FILE_PATH = PACKAGE_META_FILE
 Tree.PACKAGE_ROOT_APPEND = PACKAGE_ROOT_APPEND
 
+function Tree.getDataTypePropertyValue(
+	value: any
+): any | string
+	local dataType = typeof(value)
+	if TreeDataTypes[dataType] then
+		return TreeDataTypes[dataType].Ser(value)
+	else
+		Util.warn("No serialiser for data type:", dataType)
+		return tostring(value)
+	end
+end
+
+function Tree.getDataTypeFromPropertyValue(
+	value: any
+): string
+	local dataType = ""
+	for typeName, _ in value do
+		dataType = typeName
+		break
+	end
+
+	if TreeDataTypes[dataType] then
+		return TreeDataTypes[dataType].Des(value)
+	else
+		Util.warn("No deserialiser for data type:", dataType)
+		return tostring(value)
+	end
+end
+
+function Tree.getAttributePropertyValue(
+	value: any
+): any?
+	local genericType = type(value)
+
+	if genericType == "string" then
+		return {
+			String = value
+		}
+	elseif genericType == "number" then
+		return {
+			Float64 = value
+		}
+	elseif genericType == "boolean" then
+		return {
+			Bool = value
+		}
+	elseif genericType == "userdata" then
+		return Tree.getDataTypePropertyValue(value)
+	else
+		Util.warn("Unknown attribute type:", genericType)
+		return nil
+	end
+end
+
 function Tree.getInstanceProperties(
 	instance: Instance
 ): {[string]: any}
@@ -73,11 +129,42 @@ function Tree.getInstanceProperties(
 			local success, value = pcall(function()
 				return instance[propInfo.Name]
 			end)
+			if value == classInfo.DefaultProperties[propInfo.Name] then
+				continue
+			end
 			if success then
-				properties[propInfo.Name] = value
+				if type(value) == "userdata" then
+					local dataType = typeof(value)
+					if dataType == "EnumItem" then
+						properties[propInfo.Name] = value.Name
+					else
+						properties[propInfo.Name] = Tree.getDataTypePropertyValue(value)
+					end
+				else
+					properties[propInfo.Name] = value
+				end
 			end
 		end
 	end
+
+	local tags: {string} = {}
+	local attributes: {[string]: any} = {}
+	for attrName, attrValue in instance:GetAttributes() do
+		attributes[attrName] = Tree.getAttributePropertyValue(attrValue)
+	end
+	
+	for _, tag in instance:GetTags() do
+		table.insert(tags, tag)
+	end
+
+	if next(attributes) ~= nil then
+		properties["Attributes"] = attributes
+	end
+
+	if #tags > 0 then
+		properties["Tags"] = tags
+	end
+
 	return properties
 end
 
@@ -105,7 +192,7 @@ function Tree.constructInstanceTreeFromInstance(
 					if treeSuccess then
 						table.insert(children, tree)
 					else
-						warn("Could not construct instance tree for instance:", inst.Name)
+						Util.warn("Could not construct instance tree for instance:", inst.Name)
 						print(tree)
 					end
 				end
@@ -115,10 +202,15 @@ function Tree.constructInstanceTreeFromInstance(
 	end
 
     local children = instance:GetChildren()
+	local tags = instance:GetTags()
+	local attributes = instance:GetAttributes()
     local isScript = SCRIPT_EXTENSIONS[instance.ClassName] ~= nil
     local extension = SCRIPT_EXTENSIONS[instance.ClassName] or ".meta.json"
 
-    if #children == 0 then
+	local hasTags = #tags > 0
+	local hasAttributes = next(attributes) ~= nil
+
+    if #children == 0 and not hasTags and not hasAttributes then
         if isScript then
             return {
                 type = "file",
@@ -133,28 +225,28 @@ function Tree.constructInstanceTreeFromInstance(
             }
 		-- hack until we can handle userdata better
 		-- although with Content in specific its gonna be a pain; especially with recreating the package
-		elseif instance.ClassName == "Sound" then
-			return {
-				type = "file",
-				name = instance.Name .. ".meta.json",
-				content = serde.encode("json", {
-					["$className"] = instance.ClassName,
-					["$properties"] = {
-						SoundId = (instance :: Sound).AudioContent.Uri,
-						Volume = (instance :: Sound).Volume,
-						Looped = (instance :: Sound).Looped,
-						Playing = (instance :: Sound).Playing,
-					}
-				})
-			}
+		-- elseif instance.ClassName == "Sound" then
+		-- 	return {
+		-- 		type = "file",
+		-- 		name = instance.Name .. ".meta.json",
+		-- 		content = serde.encode("json", {
+		-- 			["$className"] = instance.ClassName,
+		-- 			["$properties"] = {
+		-- 				SoundId = (instance :: Sound).AudioContent.Uri,
+		-- 				Volume = (instance :: Sound).Volume,
+		-- 				Looped = (instance :: Sound).Looped,
+		-- 				Playing = (instance :: Sound).Playing,
+		-- 			}
+		-- 		})
+		-- 	}
         else
             return {
                 type = "file",
                 name = instance.Name .. ".meta.json",
                 content = serde.encode("json", {
                     -- Name = instance.Name,
-                    ["$className"] = instance.ClassName,
-                    ["$properties"] = Tree.getInstanceProperties(instance)
+                    ["className"] = instance.ClassName,
+                    ["properties"] = Tree.getInstanceProperties(instance)
                 })
             }
         end
@@ -167,13 +259,23 @@ function Tree.constructInstanceTreeFromInstance(
                 name = "init" .. extension,
                 content = (instance :: ScriptNode).Source
             })
+
+			if hasTags or hasAttributes then
+				table.insert(dirChildren, {
+					type = "file",
+					name = "init.meta.json",
+					content = serde.encode("json", {
+						["properties"] = Tree.getInstanceProperties(instance)
+					})
+				})
+			end
         elseif instance.ClassName ~= "Folder" then
 			local success, props = pcall(function()
 				return Tree.getInstanceProperties(instance)
 			end)
 
 			if not success then
-				warn("Failed to get properties for instance: ", instance.Name)
+				Util.warn("Failed to get properties for instance: ", instance.Name)
 				props = {}
 			end
 
@@ -182,8 +284,8 @@ function Tree.constructInstanceTreeFromInstance(
                 name = "init.meta.json",
                 content = serde.encode("json", {
                     -- Name = instance.Name,
-                    ["$className"] = instance.ClassName,
-                    ["$properties"] = props
+                    ["className"] = instance.ClassName,
+                    ["properties"] = props
 					
                 })
             })
@@ -275,14 +377,18 @@ function Tree.constructInstanceFromTreeNode(
 ): Instance
 	if node.type == "directory" then
 		local initScriptNode: TreeNode? = nil
+		local initMetaNode: TreeNode? = nil
 		if node.children then
-			for index, childNode in node.children do
-				if childNode.name == "init.client.luau" or childNode.name == "init.server.luau" or childNode.name == "init.luau" then
-					initScriptNode = childNode
-					table.remove(node.children, index)
-					break
-				end
-			end
+			for index = #node.children, 1, -1 do
+                local childNode = node.children[index]
+                if childNode.name == "init.client.luau" or childNode.name == "init.server.luau" or childNode.name == "init.luau" then
+                    initScriptNode = childNode
+                    table.remove(node.children, index)
+                elseif childNode.name == "init.meta.json" then
+                    initMetaNode = childNode
+                    table.remove(node.children, index)
+                end
+            end
 		end
 
 		if initScriptNode then
@@ -304,29 +410,89 @@ function Tree.constructInstanceFromTreeNode(
 				error("Invalid init script node for directory: " .. node.name)
 			end
 		else
-			local folder = roblox.Instance.new("Folder")
-			folder.Name = node.name
-			
-			if node.children then
-				for _, childNode in node.children do
-					local childInstance = Tree.constructInstanceFromTreeNode(childNode)
-					childInstance.Parent = folder
+			if initMetaNode then
+				local metaJson = serde.decode("json", initMetaNode.content or "{}")
+				local className = metaJson["className"] or "Folder"
+				local instance = roblox.Instance.new(className)
+				instance.Name = node.name
+				
+				local properties = metaJson["properties"] or {}
+				for propName, propValue in properties do
+					if propName == "Attributes" then
+						for attrName, attrValue in propValue do
+							for attrType, attrTrueValue in attrValue do
+								instance:SetAttribute(attrName, attrTrueValue)
+							end
+						end
+						continue
+					elseif propName == "Tags" then
+						for _, tagName in propValue do
+							instance:AddTag(tagName)
+						end
+						continue
+					end
+
+					pcall(function()
+						if type(propValue) == "table" then
+							instance[propName] = Tree.getDataTypeFromPropertyValue(propValue)
+						else
+							instance[propName] = propValue
+						end
+					end)
 				end
+				
+				if node.children then
+					for _, childNode in node.children do
+						local childInstance = Tree.constructInstanceFromTreeNode(childNode)
+						childInstance.Parent = instance
+					end
+				end
+				
+				return instance
+			else
+				local folder = roblox.Instance.new("Folder")
+				folder.Name = node.name
+				
+				if node.children then
+					for _, childNode in node.children do
+						local childInstance = Tree.constructInstanceFromTreeNode(childNode)
+						childInstance.Parent = folder
+					end
+				end
+				
+				return folder
 			end
-			
-			return folder
 		end
 	elseif node.type == "file" then
 		if node.name:find(".meta.json") then
 			local metaJson = serde.decode("json", node.content or "{}")
-			local className = metaJson["$className"] or "Folder"
+			local className = metaJson["className"] or "Folder"
 			local instance = roblox.Instance.new(className)
 			instance.Name = node.name:gsub("%.meta%.json$", "") -- filter for meta
 			
-			local properties = metaJson["$properties"] or {}
+			local properties = metaJson["properties"] or {}
 			for propName, propValue in properties do
+				if propName == "Attributes" then
+					for attrName, attrValue in propValue do
+						for attrType, attrTrueValue in attrValue do
+							instance:SetAttribute(attrName, attrTrueValue)
+						end
+					end
+					continue
+				elseif propName == "Tags" then
+					for _, tagName in propValue do
+						instance:AddTag(tagName)
+					end
+					continue
+				end
+
 				pcall(function()
-					instance[propName] = propValue
+					if type(propValue) == "table" then
+						print(Tree.getDataTypeFromPropertyValue(propValue), propValue)
+						instance[propName] = Tree.getDataTypeFromPropertyValue(propValue)
+					else
+						instance[propName] = propValue
+					end
 				end)
 			end
 			
@@ -376,11 +542,12 @@ function Tree.writeInstanceTreeToFS(
 			end
 		end
 	end
+
 	if tree.type == "directory" then
 		local dirPath = Util.joinPathParts(basePath, tree.name)
 		Util.dprint("Writing: ", dirPath)
 		fs.writeDir(dirPath)
-		
+
 		if tree.children then
 			for _, child in tree.children do
 				Tree.writeInstanceTreeToFS(child, dirPath, false)
@@ -392,7 +559,7 @@ function Tree.writeInstanceTreeToFS(
 		if tree.content then
 			fs.writeFile(filePath, tree.content)
 		else
-			print("Warning: File node has no content:", filePath)
+			Util.warn("File node has no content:", filePath)
 		end
 	end
 end
@@ -528,7 +695,9 @@ function Tree.compareTrees(
     end
 
 	if Util.DebugMode then
-		fs.writeFile("packageDiff.diff", fullDiff)
+		if fullDiff ~= "" then
+			fs.writeFile("packageDiff.diff", fullDiff)
+		end
 	end
 
     return result

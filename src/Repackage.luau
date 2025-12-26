@@ -80,12 +80,12 @@ local function updateLocalPackage(
 	local outDir = Config.get("outputDirectory")
 	local packagePath = RobloxAPI.getLocalPackagePath(packageName)
 	if not packagePath then
-		warn("Package not found with name:", packageName)
+		Util.warn("Package not found with name:", packageName)
 		return
 	end
 	local packageMetaPath = Util.joinPathParts(packagePath, Tree.PACKAGE_META_FILE_PATH)
 	if not fs.isFile(packageMetaPath) then
-		warn("Package meta file not found in package folder:", packageMetaPath)
+		Util.warn("Package meta file not found in package folder:", packageMetaPath)
 		return
 	end
 	local packageMetaContent = fs.readFile(packageMetaPath)
@@ -93,7 +93,7 @@ local function updateLocalPackage(
 		return serde.decode("json", packageMetaContent)
 	end)
 	if not success then
-		warn("Could not read package meta at path:", packageMetaPath)
+		Util.warn("Could not read package meta at path:", packageMetaPath)
 		return
 	end
 
@@ -120,7 +120,7 @@ local function updateLocalPackage(
 	local packageRevisionId: string? = packageData["packageRevisionId"]
 	local packageNameNew, treeNew = RobloxAPI.getPackageTree(assetId)
 	if not treeNew or not packageNameNew then
-		warn("Failed to retrieve updated package tree.")
+		Util.warn("Failed to retrieve updated package tree.")
 		return
 	end
 
@@ -140,7 +140,7 @@ local function getPackageInfo(
 )
 	local packagePath = RobloxAPI.getLocalPackagePath(packageName)
 	if not packagePath then
-		warn("Package not found with name:", packageName)
+		Util.warn("Package not found with name:", packageName)
 		return
 	end
 
@@ -178,7 +178,7 @@ local function getPackageRevisions(
 )
 	local meta = RobloxAPI.getAssetMeta(assetId)
 	if not meta then
-		warn("Could not get package meta for asset with ID:", assetId)
+		Util.warn("Could not get package meta for asset with ID:", assetId)
 		return
 	end
 

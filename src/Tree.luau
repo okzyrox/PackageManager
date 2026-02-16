@@ -21,6 +21,7 @@ export type TreeNode = {
 	type: TreeNodeType,
 	name: string,
 	content: string?, --/ either file source code or meta content
+	meta: string?, --/ meta content
 	children: {TreeNode}?,
 
 	--/ only for uppermost meta package:
@@ -537,39 +538,67 @@ function Tree.constructInstanceTreeFromDirectory(
 	end
 	local children = fs.readDir(dirPath)
 
-	local dirChildren = {}
+	--/ Maps
+	local fileMap: {[string]: {name: string, content: string, isDir: boolean}} = {}
+	local metaMap: {[string]: string} = {}
+	
+	--/ Enumerate to populate maps
 
+	--/ Pass 1
 	for _, childName in children do
 		local childPath = dirPath .. "/" .. childName
 		
+		if childPath:find(PACKAGE_META_FILE) then
+			continue
+		end
+		
 		if fs.isDir(childPath) then
+			fileMap[childName] = {name = childName, content = "", isDir = true}
+		else
+			local content = fs.readFile(childPath)
+			
+			if childName:find("%.meta%.json$") and not childName:find("^init%.meta%.json$") then
+				local baseName = childName:gsub("%.meta%.json$", "")
+				local metaJson = serde.decode("json", content)
+				local reMetaJson = serde.encode("json", metaJson)
+				metaMap[baseName] = reMetaJson
+			else
+				fileMap[childName] = {name = childName, content = content, isDir = false}
+			end
+		end
+	end
+	
+	local dirChildren = {}
+	
+	--/ Pass 2
+	for fileName, fileData in fileMap do
+		if fileData.isDir then
+			local childPath = dirPath .. "/" .. fileName
 			table.insert(dirChildren, Tree.constructInstanceTreeFromDirectory(childPath))
 		else
-			if childPath:find(PACKAGE_META_FILE) then
-				continue
-			end
-			local content = fs.readFile(childPath)
-			if childPath:find(".meta.json") then
-				local metaJson = serde.decode("json", content)
-				local reMetaJson = serde.encode("json", metaJson) -- rencode to remove pretty formatting (if any)
+			local baseName = fileName:gsub("%..-$", "")
+			local metaContent = metaMap[baseName] or metaMap[fileName]
+			
+			if fileName:find("%.meta%.json$") then
+				local metaJson = serde.decode("json", fileData.content)
+				local reMetaJson = serde.encode("json", metaJson)
 				table.insert(dirChildren, {
 					type = "file",
-					name = childName,
+					name = fileName,
 					content = reMetaJson
 				})
-				continue
-			elseif childPath:find(".meta.rbxmx") then
+			elseif fileName:find("%.meta%.rbxmx$") then
 				table.insert(dirChildren, {
 					type = "binaryfile",
-					name = childName,
-					content = content
+					name = fileName,
+					content = fileData.content
 				})
-				continue
 			else
 				table.insert(dirChildren, {
 					type = "file",
-					name = childName,
-					content = content
+					name = fileName,
+					content = fileData.content,
+					meta = metaContent
 				})
 			end
 		end
@@ -743,6 +772,15 @@ function Tree.constructInstanceFromTreeNode(
 
 				if not root then
 					root = scriptInstance
+				end
+				
+				if node.meta then
+					local metaJson = serde.decode("json", node.meta)
+					if metaJson["name"] then
+						scriptInstance.Name = metaJson["name"]
+					end
+					local properties = metaJson["properties"] or {}
+					Tree.addInstanceProperties(scriptInstance, properties)
 				end
 
 				return scriptInstance

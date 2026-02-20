@@ -61,15 +61,24 @@ jobs:
         with:
           path: artifacts
       
-      - name: List Artifacts
-        run: ls -la artifacts
+      - name: Zip artifacts
+        run: |
+          cd artifacts
+          for dir in */; do
+            dirn="${dir%/}"
+            cd "$dirn"
+            zip "../../${dirn}.zip" *
+            cd ..
+          done
+          cd ..
+          ls -la *.zip
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           name: Nightly - ${{ steps.slug.outputs.sha_short }}
           tag_name: nightly-${{ steps.slug.outputs.sha_short }}
-          files: artifacts/*.zip
+          files: "*.zip"
           draft: false
           prerelease: false
         env:

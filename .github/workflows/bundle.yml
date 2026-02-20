@@ -41,12 +41,14 @@ jobs:
       - name: Upload Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Repackage-${{ matrix.platform.name }}-${{ matrix.arch }}
+          name: repackage-${{ matrix.platform.name }}-${{ matrix.arch }}
           path: bundle/repackage*
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -64,7 +66,7 @@ jobs:
         with:
           name: Nightly - ${{ steps.slug.outputs.sha_short }}
           tag_name: nightly-${{ steps.slug.outputs.sha_short }}
-          files: artifacts/**
+          files: artifacts/*.zip
           draft: false
           prerelease: false
         env:

@@ -11,6 +11,7 @@ local stdio = require("@lune/stdio")
 local task = require("@lune/task")
 local roblox = require("@lune/roblox")
 
+local Version = require("./Version")
 local Tree = require("./Tree")
 local Util = require("./Util")
 local Config = require("./Config")
@@ -505,6 +506,17 @@ local Commands: {[string]: Command} = {
 		args = {},
 		desc = "Setup the current folder for Repackage usage",
 		func = setup
+	},
+	version = {
+		args = {},
+		desc = "Current version of Repackage",
+		func = function()
+			print(formatted("Version: " .. Version.Version, "light_cyan"))
+		end,
+		aliases = {
+			"-v",
+			"--version"
+		}
 	},
 	create = {
 		args = {

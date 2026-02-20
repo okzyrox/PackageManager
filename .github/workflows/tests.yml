@@ -1,0 +1,31 @@
+name: Run Tests
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/**'
+      - 'tests/**'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        platform: 
+          - {name: windows, os: windows-2022}
+          - {name: linux, os: ubuntu-22.04}
+        arch: [x86_64, aarch64]
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - uses: CompeyDev/setup-rokit@v0.1.2
+        with:
+          version: v1.2.0
+          cache: false
+          token: ${{ github.token }}
+      
+      - name: Run Tests
+        run: cd tests && lune run TestRunner.luau 

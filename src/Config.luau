@@ -25,7 +25,6 @@ export type Config = {
 }
 
 export type SecretsConfig = {
-	secretsType: "file" | "env",
 	secretsDirectory: string?,
 	secretsFile: string?,
 	secretsEnvKey: string?,
@@ -40,7 +39,6 @@ local DEFAULT_CONFIG: Config = {
 	serialiseNonScripts = false,
 
 	secrets = {
-		secretsType = "file", -- file | env
 		secretsDirectory = "secrets/",
 		secretsFile = "api_key.txt",
 		secretsEnvKey = "ROBLOX_API_KEY",
@@ -127,6 +125,10 @@ function Config.getOrDefault(
 	else
 		return value
 	end
+end
+
+function Config.setUserConfig(config: Config): ()
+	UserConfig = config
 end
 
 return Config

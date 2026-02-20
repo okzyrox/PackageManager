@@ -44,16 +44,13 @@ Whether non-script instances, such as Models or Parts, should be serialised as R
 - If `true`: then they will be serialised as `Repackage` `.meta.json`.
 - If `false`: then they will be serialised as `Roblox` `.rbxmx`.
 #### `secrets` - `struct`
+  - The paths to search for the Roblox API Key for requests
 - ##### `secretsEnvKey` - `string?`
   - The environment variable name for the Roblox API key
 - ##### `secretsFile` - `string?`
   - The file path for the file containing just the Roblox API key
 - ##### `secretsDirectory` - `string?`
   - The directory path used in tandem with `secretsFile` for the Roblox API key
-- #### `secretsType` - `file | env`
-  - Decides which method to use for finding and using the API Key
-    - If `file`, then will use `secretsDirectory` and `secretsFile` to find it
-    - If `env`, then will use `secretsEnvKey` to find it
 
 ## Working with Repackage & Rojo
 
@@ -129,11 +126,16 @@ So that when you work with rojo, you can do something like this when handling pa
 - [ ] Reverting
     - requires mapping comparison
 
-- [ ] Sub packages (packages within packages)
+- [ ] 
 
 ## Todo - Internal
 - [x] Add warning when publishing about unresolved Refs if any
 - [x] Add warning when creating/publishing about sub-packages (unsupported)
+
+## Likely won't add
+
+- Sub packages (packages within packages)
+  - Too complex and messy of an architecture, paired with publishing just makes for a difficult time. Unlike something like Git Submodules, it's not something that can be easily linked as a reference due to complications.
 
 ## Limitations
 

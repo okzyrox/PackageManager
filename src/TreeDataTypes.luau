@@ -174,18 +174,19 @@ TreeDataTypes["Axes"] = {
             Axes = axesData,
         }
     end,
+    -- Broken, for now, due to the implementation erroring when passed `nil` instead of just skipping it
     Des = function(data: MetaAxes): Axes
         local axesData = data["Axes"] :: {string}
-        local x = false
-        local y = false
-        local z = false
+        local x = nil
+        local y = nil
+        local z = nil
         for _, axis in axesData do
             if axis == "X" then
-                x = true
+                x = roblox.Enum.Axis.X
             elseif axis == "Y" then
-                y = true
+                y = roblox.Enum.Axis.Y
             elseif axis == "Z" then
-                z = true
+                z = roblox.Enum.Axis.Z
             end
         end
         return roblox.Axes.new(x, y, z)

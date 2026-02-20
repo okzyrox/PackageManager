@@ -4,7 +4,7 @@
 debug/**
 output/**
 secrets/**
-tests/**
+oldtests/**
 
 # Bundle
 *.bat

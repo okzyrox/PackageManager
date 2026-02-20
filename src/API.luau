@@ -61,51 +61,50 @@ local ApiKey: string? = nil
 local API = {}
 API.URLS = URLS
 
-function API.getApiKey(): string
+function API.getApiKey(): string?
 	if ApiKey then
 		return ApiKey
 	end
 
 	local secrets = Config.get("secrets") :: Config.SecretsConfig?
 	if secrets == nil then
-		error("No secrets configuration found!")
+		print("No secrets config found!")
+		return nil
 	end
 
-	if secrets.secretsType == "env" then
-		local envKeyName: string? = secrets.secretsEnvKey
-		if envKeyName == nil then
-			error("No environment key was configured for the API Key!")
-		end
+	local foundKey: string? = nil
 
+	local envKeyName: string? = secrets.secretsEnvKey
+	if envKeyName then
 		local envKeyValue: string? = process.env[envKeyName]
-		if envKeyValue == nil then
-			error("No API key found in environment: " .. envKeyName)
+		if envKeyValue then
+			foundKey = envKeyValue
 		end
-
-		ApiKey = envKeyValue
-		return envKeyValue
-	elseif secrets.secretsType == "file" then
-		local keyName: string? = secrets.secretsFile
-		if keyName == nil then
-			error("No API Key file was configured!")
-		end
-		local secretsDir: string? = secrets.secretsDirectory
-		if secretsDir == nil then
-			error("Configured secrets directory does not exist!")
-		end
-
-		local keyPath = Util.joinPathParts(secretsDir, keyName)
-
-		if fs.isFile(keyPath) then
-			local fileKey = fs.readFile(keyPath)
-			ApiKey = fileKey
-			return fileKey
-		else
-			error("No API key found! Expected at path: " .. keyPath)
-		end
-	else
-		error("Invalid secrets type!")
 	end
+
+	if not foundKey then
+		local secretsFile: string? = secrets.secretsFile
+		local secretsDir: string? = secrets.secretsDirectory
+		if secretsFile and secretsDir then
+			local keyPath = Util.joinPathParts(secretsDir, secretsFile)
+			if fs.isFile(keyPath) then
+				local fileKey = fs.readFile(keyPath)
+				foundKey = fileKey
+			end
+		end
+	end
+
+	if foundKey then
+		ApiKey = foundKey
+		return foundKey
+	else
+		
+		return nil
+	end
+end
+
+function API.clearApiKey()
+	ApiKey = nil
 end
 
 function API.makeRequest(

@@ -20,7 +20,11 @@ jobs:
         arch: [x86_64, aarch64]
     runs-on: ${{ matrix.platform.os }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Get short SHA
+        id: slug
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
       - uses: CompeyDev/setup-rokit@v0.1.2
         with:
           version: v1.2.0
@@ -41,7 +45,7 @@ jobs:
       - name: Upload Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: repackage-${{ matrix.platform.name }}-${{ matrix.arch }}
+          name: repackage-${{ steps.slug.outputs.sha_short }}-${{ matrix.platform.name }}-${{ matrix.arch }}
           path: bundle/repackage*
 
   release:

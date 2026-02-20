@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         platform: 
-          - {name: windows, os: windows-2022}
           - {name: linux, os: ubuntu-22.04}
         arch: [x86_64, aarch64]
     runs-on: ${{ matrix.platform.os }}

@@ -9,6 +9,8 @@ on:
       - 'bundle/darklua.config'
       - 'rokit.toml'
       - 'selene.toml'
+    tags-ignore:
+      - 'v*'
 
 jobs:
   build:
@@ -50,43 +52,3 @@ jobs:
         with:
           name: repackage-${{ steps.slug.outputs.sha_short }}-${{ matrix.platform.name }}-${{ matrix.arch }}
           path: bundle/repackage*
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Get short SHA
-        id: slug
-        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-      
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      
-      - name: Zip artifacts
-        run: |
-          cd artifacts
-          for dir in */; do
-            dirn="${dir%/}"
-            cd "$dirn"
-            zip "../../${dirn}.zip" *
-            cd ..
-          done
-          cd ..
-          ls -la *.zip
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Nightly - ${{ steps.slug.outputs.sha_short }}
-          tag_name: nightly-${{ steps.slug.outputs.sha_short }}
-          files: "*.zip"
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

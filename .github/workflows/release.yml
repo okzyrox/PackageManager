@@ -1,0 +1,85 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: 
+          - {name: windows, os: windows-2022}
+          - {name: linux, os: ubuntu-22.04}
+        arch: [x86_64, aarch64]
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - uses: CompeyDev/setup-rokit@v0.1.2
+        with:
+          version: v1.2.0
+          cache: false
+          token: ${{ github.token }}
+      
+      - name: Bundle Files
+        run: darklua process src/Repackage.luau bundle/Bundled.luau -c bundle/darklua.config
+
+      - name: Build (Windows)
+        if: matrix.platform.name == 'windows'
+        run: lune build bundle/Bundled.luau -o bundle/repackage.exe -t windows-${{ matrix.arch }}
+      
+      - name: Build (Linux)
+        if: matrix.platform.name == 'linux'
+        run: lune build bundle/Bundled.luau -o bundle/repackage -t linux-${{ matrix.arch }}
+          
+      - name: Upload Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repackage-${{ github.ref_name }}-${{ matrix.platform.name }}-${{ matrix.arch }}
+          path: bundle/repackage*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Get Version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(bash scripts/get_version.sh)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Zip artifacts
+        run: |
+          cd artifacts
+          for dir in */; do
+            dirn="${dir%/}"
+            cd "$dirn"
+            zip "../../${dirn}.zip" *
+            cd ..
+          done
+          cd ..
+          ls -la *.zip
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          files: "*.zip"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

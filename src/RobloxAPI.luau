@@ -136,23 +136,60 @@ function RobloxAPI.asset(
 	}
 end
 
+local function findRecursive(
+	searchDir: string,
+	packageName: string,
+	packageNameWithExt: string
+): string?
+	if not fs.isDir(searchDir) then
+		return nil
+	end
+
+	local children = fs.readDir(searchDir)
+	
+	for _, childName in children do
+		local childPath = Util.joinPathParts(searchDir, childName)
+		
+		if fs.isDir(childPath) then
+			if childName == packageNameWithExt then
+				return childPath
+			end
+
+			if Util.stringStartsWith(childName, packageName) and Util.stringEndsWith(childName, ".Package") then
+				return childPath
+			end
+			
+			local found = findRecursive(childPath, packageName, packageNameWithExt)
+			if found then
+				return found
+			end
+		end
+	end
+	
+	return nil
+end
+
 function RobloxAPI.getLocalPackagePath(
 	packageName: string
 ): string?
 	local outDir = Config.get("outputDirectory")
-	local packagePath = Util.joinPathParts(outDir, packageName)
-	if not fs.isDir(packagePath) then
-		if Util.stringEndsWith(packagePath, ".Package") then
-			return nil
-		else
-			packagePath = Util.joinPathParts(outDir, packageName .. ".Package")
-			if not fs.isDir(packagePath) then
-				return nil
-			end
-		end
+	
+	local packageNameWithExt = packageName
+	if not Util.stringEndsWith(packageName, ".Package") then
+		packageNameWithExt = packageName .. ".Package"
 	end
-
-	return packagePath
+	
+	local packagePath = Util.joinPathParts(outDir, packageName)
+	if fs.isDir(packagePath) then
+		return packagePath
+	end
+	
+	packagePath = Util.joinPathParts(outDir, packageNameWithExt)
+	if fs.isDir(packagePath) then
+		return packagePath
+	end
+	
+	return findRecursive(outDir, packageName, packageNameWithExt)
 end
 
 --/ Get Asset Meta

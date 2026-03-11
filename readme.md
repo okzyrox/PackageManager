@@ -1,11 +1,20 @@
 # Repackage
 
-Experimental
+Experimental tool that aims to allow you to quickly publish changes to packages on Roblox corresponding to a given directory of files and associated package file
 
-Aims to be a utility tool for quickly publishing changes to packages on Roblox relevant to a given directory of files and associated package file
+# Installation
 
+The easiest way to install Repackage is if you are using [Rokit](https://github.com/rojo-rbx/rokit) in your project, where you can easily just add the following toolchain:
+```toml
+repackage = "okzyrox/repackage@VERSION
+```
 
-## Repackage Config Spec
+The `VERSION` refers to the latest version if you want, or whichever release you choose.
+
+<details align="center">
+<summary> <code>repackage.config.json</code> explanation </summary>
+
+## Repackage Config
 ```jsonc
 {
   "debugLogs": false, // true / false 
@@ -52,10 +61,15 @@ Whether non-script instances, such as Models or Parts, should be serialised as R
 - ##### `secretsDirectory` - `string?`
   - The directory path used in tandem with `secretsFile` for the Roblox API key
 
+</details>
+
 ## Working with Repackage & Rojo
 
 > [!WARNING]
 > Using Rojo sync will (more often than not), incorrectly sync over meta properties for instances. Due to it's inconsistencies there may be bugs when using Rojo w/ Repackage.
+
+> [!WARNING]
+> Refer to #Limitations for a full list of thing's that are not supported currently with Repackage
 
 Repackage isn't technically designed to work 100% with Rojo, however you can still use it if you wish. 
 
@@ -65,7 +79,7 @@ Here are my recommendations:
 ```jsonc
 {
   // ...
-  "outputDirectory": "Packages/" // locally store all your packages in this single place
+  "outputDirectory": "Repackage/" // locally store all your repackage-managed packages in this single place
   // ...
 }
 ```
@@ -84,8 +98,8 @@ So that when you work with rojo, you can do something like this when handling pa
     "ReplicatedStorage": {
       "Shared": {
         "$className": "Folder",
-        "Modules": {
-          "$path": "Packages/SharedModules.Package/SharedModules" // directly reference the package folder correlating to where it's used
+        "SharedWhatever": {
+          "$path": "Repackage/SharedWhatever.Package/SharedWhatever" // directly reference the package folder correlating to where it's used
         },
         "$path": "src/shared" // include other shared files
       },
@@ -94,11 +108,11 @@ So that when you work with rojo, you can do something like this when handling pa
     "ServerScriptService": {
       "Server": {
         "$className": "Folder",
-        "Services": {
-          "$path": "Packages/ServerServices.Package/ServerServices"
+        "ServerWhatever": {
+          "$path": "Repackage/ServerWhatever.Package/ServerWhatever"
         },
-        "Modules": {
-          "$path": "Packages/ServerModules.Package/ServerModules"
+        "ServerThings": {
+          "$path": "Repackage/ServerThings.Package/ServerThings"
         },
         "$path": "src/server" // include other server files
       }
@@ -107,6 +121,8 @@ So that when you work with rojo, you can do something like this when handling pa
   }
 }
 ```
+
+The structure is intended such that you do not edit the package link objects themselves, rather in your Rojo workspace or Codebase game you edit folders which mimic the packages. Upon syncing / publishing the packages with the changes made, the actual package objects will update to receive your changes.
 
 ## Todo
 
@@ -126,12 +142,6 @@ So that when you work with rojo, you can do something like this when handling pa
 - [ ] Reverting
     - requires mapping comparison
 
-- [ ] 
-
-## Todo - Internal
-- [x] Add warning when publishing about unresolved Refs if any
-- [x] Add warning when creating/publishing about sub-packages (unsupported)
-
 ## Likely won't add
 
 - Sub packages (packages within packages)
@@ -140,6 +150,8 @@ So that when you work with rojo, you can do something like this when handling pa
 ## Limitations
 
 Can handle most datatypes and objects, although I dont recommend storing your assets and code in the same package, as it makes the file structure messy. I personally mainly use seperate Packages for Code and actual Instances.
+
+- You must manually check if your local package clone is out of date via the command `repackage diff` which will let you know if you are on an Outdated version **IF** you do not have any changes currently.
 
 Requires a specific structure for packages;
 - The package's "main" instance must be a Folder or Folder-like (the instance with the PackageLink inside)

@@ -2,7 +2,7 @@
 
 Experimental tool that aims to allow you to quickly publish changes to packages on Roblox corresponding to a given directory of files and associated package file
 
-# Installation
+## Installation
 
 The easiest way to install Repackage is if you are using [Rokit](https://github.com/rojo-rbx/rokit) in your project, where you can easily just add the following toolchain:
 ```toml
@@ -69,7 +69,7 @@ Whether non-script instances, such as Models or Parts, should be serialised as R
 > Using Rojo sync will (more often than not), incorrectly sync over meta properties for instances. Due to it's inconsistencies there may be bugs when using Rojo w/ Repackage.
 
 > [!WARNING]
-> Refer to #Limitations for a full list of thing's that are not supported currently with Repackage
+> Refer to [Limitations](#limitations) for a full list of thing's that are not supported currently with Repackage
 
 Repackage isn't technically designed to work 100% with Rojo, however you can still use it if you wish. 
 
@@ -122,9 +122,21 @@ So that when you work with rojo, you can do something like this when handling pa
 }
 ```
 
-The structure is intended such that you do not edit the package link objects themselves, rather in your Rojo workspace or Codebase game you edit folders which mimic the packages. Upon syncing / publishing the packages with the changes made, the actual package objects will update to receive your changes.
+### 3. Why?
 
-## Todo
+The structure is intended such that you do not edit the package link objects themselves outside of the Repackage-configured codebase *(if you are also using Git)*, rather in your Rojo workspace or Codebase game you edit folders which mimic the packages. Upon syncing / publishing the packages with the changes made, the actual package objects will update to receive your changes.
+
+For instance, in repositories that I use Repackage in, I've configured a workflow to automatically publish the changes to the packages where changes were made and then re-commit the updated package revision reference back as a sort of back-and-forth approach.
+
+The reason why I did this is so that revisions which branches and forks are using are properly tracked and integrated, as using an approach to update it locally can cause out of sync and difficult to merge branches in my experience at least. 
+
+
+## Known issues
+
+- Internal returned values are all over the place (my bad..)
+- No user-facing access to downloading specific versions of packages
+
+## TODO-List
 
 - [x] Generate package map for a given package (asset)
     - [x] generate from specific revision
@@ -161,8 +173,3 @@ Requires a specific structure for packages;
 - Cannot handle instance Refs that are outside of the package; will throw a warning if it fails to find one
   - as such, packages that contain references to things outside of the package should not be used.
   - furthermore, the `info` command will kindly print out every time it fails to find a reference if the `debugUnresolvedRefs` config option is `true`
-
-## Known issues
-
-- Internal returned values are all over the place (my bad..)
-- No user-facing access to downloading specific versions of packages

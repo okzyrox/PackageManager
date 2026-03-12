@@ -1,4 +1,4 @@
-name: Bundle
+name: Nightly
 on:
   push:
     branches:
@@ -47,8 +47,8 @@ jobs:
         if: matrix.platform.name == 'linux'
         run: lune build bundle/Bundled.luau -o bundle/repackage -t linux-${{ matrix.arch }}
           
-      - name: Upload Bundle Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: repackage-${{ steps.slug.outputs.sha_short }}-${{ matrix.platform.name }}-${{ matrix.arch }}
-          path: bundle/repackage*
+      # - name: Upload Bundle Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: repackage-${{ steps.slug.outputs.sha_short }}-${{ matrix.platform.name }}-${{ matrix.arch }}
+      #     path: bundle/repackage*

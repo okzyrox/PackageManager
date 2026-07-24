@@ -64,10 +64,6 @@ Whether non-script instances, such as Models or Parts, should be serialised as R
 </details>
 
 ## Working with Repackage & Rojo
-
-> [!WARNING]
-> Using Rojo sync will (more often than not), incorrectly sync over meta properties for instances. Due to it's inconsistencies there may be bugs when using Rojo w/ Repackage.
-
 > [!WARNING]
 > Refer to [Limitations](#limitations) for a full list of thing's that are not supported currently with Repackage
 
